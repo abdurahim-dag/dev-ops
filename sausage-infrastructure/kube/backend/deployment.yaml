@@ -1,0 +1,93 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  minReadySeconds: 60
+  strategy:
+    rollingUpdate:
+      maxSurge: 20%
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: backend
+  revisionHistoryLimit: 12
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: gitlab.praktikum-services.ru:5050/std-022-044/sausage-store/sausage-backend:latest
+          imagePullPolicy: Always
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://rc1a-swsg2g6j6bhznvm0.mdb.yandexcloud.net:6432/std-022-044?ssl=true
+            - name: REPORT_PATH
+              value: /var/sausage-store/reports
+            - name: LOG_PATH
+              value: /var/sausage-store/logs
+            - name: PSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: backend
+                  key: psql_user
+            - name: PSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: backend
+                  key: psql_password
+            - name: PSQL_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: backend
+                  key: psql_host
+            - name: PSQL_DBNAME
+              valueFrom:
+                secretKeyRef:
+                  name: backend
+                  key: psql_dbname
+            - name: psql_port
+              valueFrom:
+                secretKeyRef:
+                  name: backend
+                  key: psql_port
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: backend
+                  key: spring_datasource_username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: backend
+                  key: spring_datasource_password
+            - name: SPRING_DATA_MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: backend
+                  key: spring_data_mongodb_uri
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "200m"
+          ports:
+            - name: backend
+              containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 1
+            failureThreshold: 6
+      imagePullSecrets:
+        - name: docker-config-secret

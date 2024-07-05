@@ -1,0 +1,46 @@
+---
+groups:
+  - name: Sausage store rules
+    rules:
+    - alert: InstanceDown
+      expr: up{app="backend"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        project: "sausage_store"
+        component: "Backend"
+      annotations:
+        summary: "Backend is down"
+        description: "Instance of backend detected is down."    
+    - alert: HighErrorRate
+      expr: increase(http_server_requests_seconds_count{status=~"5.."}[5m]) > 0
+      for: 1m
+      labels:
+        severity: critical
+        project: "sausage_store"
+        component: "Frontend"
+      annotations:
+        summary: "5xx detected"
+        description: "HTTP 5xx errors in the last 5 minutes."
+    - alert: HighLatencyPOSTOrders
+      expr: histogram_quantile(0.95, sum without (uri)( rate(http_server_requests_seconds_bucket{uri="/api/orders", method="POST", status="201"}[5m])))>0.1
+      for: 5m
+      labels:
+        severity: warning
+        project: "order_service"
+        component: "API"
+      annotations:
+        summary: "High latency for POST /api/orders"
+        description: "The 95th percentile latency for POST requests to /api/orders has been above 100ms for the past 5 minutes."
+  - name: Actuator Alerts
+    rules:
+    - alert: ActuatorError
+      expr: increase(http_server_requests_seconds_count{uri=~"/actuator/prometheus", status!~"^2.*"}[2m]) > 0
+      for: 2m
+      labels:
+        severity: critical
+        project: "monitoring"
+        component: "Actuator"
+      annotations:
+        summary: "Error response from /actuator/prometheus"
+        description: "Received HTTP 5xx error(s) from /actuator/prometheus in the last 2 minutes."

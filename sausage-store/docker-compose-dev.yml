@@ -1,0 +1,71 @@
+version: '3'
+
+services:
+  certbot:
+    image: certbot/certbot:latest
+    container_name: certbot
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - ./certbot.sh:/home/certbot.sh
+      - webroot:/var/www/html
+    networks:
+      - sausage_store
+    entrypoint: chmod 777 /home/certbot.sh && /home/certbot.sh
+
+  frontend:
+    container_name: sausage-frontend
+    build:
+      context: frontend
+      args:
+        VERSION: ${VERSION}
+    environment:
+      - DEFAULT_HOST=test2
+    expose:
+      - "80"
+      - "443"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - letsencrypt:/etc/letsencrypt:ro
+      - webroot:/home/certbot:ro
+    networks:
+      - sausage_store
+    restart: unless-stopped
+    
+
+  backend:
+    build:
+      context: backend
+      args:
+        VERSION: ${VERSION}
+    env_file: ./.backend.env      
+    environment:
+      - VIRTUAL_HOST=test2
+    expose:
+      - "8080"
+    networks:
+      - sausage_store
+    restart: unless-stopped
+
+  backend-report:
+    container_name: sausage-report
+    build:
+      context: backend-report
+    env_file: ./.report.env      
+    expose:
+      - "8080"
+    ports:
+      - "8083:8080"
+    networks:
+      - sausage_store
+    restart: unless-stopped
+
+volumes:
+  letsencrypt:
+  webroot:
+  
+networks:
+  sausage_store:
+    driver: bridge

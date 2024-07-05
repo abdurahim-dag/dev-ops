@@ -1,0 +1,11 @@
+#cloud-config
+groups:
+  - ansible
+
+users:
+  - name: ansible
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    primary_group: ansible
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCxbHgXMmtMZcIu+P6/E0/G88c9owqp35uf+vJTWssVTd7spnzAxyiTA9w0Md2vaRrlMxC3CLVUx9eKiEqU83nj66RUIffFwK6aDqt+4wn9FfstLmBoIK0IgJmDpLU/907eqgfv891DQO76IBe3ksngEC9lvSxuOIMEApvUD+ynZJjREuWvm15ZUVgoutppEuuLWU+RtwxWFcCga/oUID6ROhyqc4AXVD1GMjM9aV9VZBy0dBogSXxXsg8k1rDYp2syJ/VxxDOHdjwFZuykT2Ek+DKQojEK/F+Wr3xRgAdMtd/Yot1rrLXBy0VePQt65ZNA7hUe0DTMJwq314xt0aJopWSLN9jMi2SNBcQqC2gdrbHKpyxq18/dB0yqSLLfQrfxDuJC8dbNnnu4najsNg6b/sqm1nBNhFamkDaDIjyg+XVsV46mJx3nShcI5mruGNx4nsXBeE6q+s3KuZPSXB7gsvGNp80d+QRJj+B8dUtjzFJfa4XyFu2EfZAl1zB/rrKk4739hg0/SV33evQ9cNe6bFgODpnMTaZv18Z+4eIj9e7rFmsT57bJZWh2hxL6Brjd1mKjOlujVyTHKJxFemQN7IQ5Ch/icxoTB9ThkceWXLXcU6AF5lVwNgXk81/kvcHUjs4LphmX99btJmIId1uiUmsUkb1O9Z1XILxk9rsqew== ragimatamov@yandex.ru

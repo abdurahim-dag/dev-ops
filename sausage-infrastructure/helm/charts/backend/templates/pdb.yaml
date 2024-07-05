@@ -1,0 +1,11 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "sausage-store-chart.name" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+ minAvailable: {{ .Values.minAvailable }}
+ selector:
+   matchLabels:
+     {{- include "sausage-store-chart.selectorLabels" . | nindent 6 }}

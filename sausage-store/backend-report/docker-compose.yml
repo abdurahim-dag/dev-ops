@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  backend-report:
+    container_name: sausage-report
+    build:
+      context: .
+    image: ${CI_REGISTRY_IMAGE}/sausage-backend-report:${CI_COMMIT_SHA}
+    expose:
+      - "8080"
+    env_file:
+      - path: .env

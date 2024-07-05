@@ -1,0 +1,11 @@
+minReplicas: 1
+maxReplicas: 5
+minAvailable: 1
+maxUnavailable: 1  
+containerPort: 8081
+servicePort: 8081
+minReadySeconds: 60
+revisionHistoryLimit: 12
+repository: gitlab.praktikum-services.ru:5050/std-022-044/momo-store/momo-backend    
+namePullSecrets: docker-config-secret
+imageTag: latest

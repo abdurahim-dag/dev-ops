@@ -1,0 +1,12 @@
+---
+nexus_repo_backend_name: std-022-044-backend
+
+service_account: backend
+service_group: backend
+
+backend_folder_path: /opt/sausage-store/bin
+version: 1.0.961601
+report_path: /var/sausage-store/reports
+log_path: /var/sausage-store/logs
+backend_exe: sausage-store.jar
+backend_port: 8081

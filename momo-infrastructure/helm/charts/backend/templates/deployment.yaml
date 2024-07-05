@@ -1,0 +1,62 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "momo-store-chart.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "momo-store-chart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.minReplicas }}
+  minReadySeconds: {{ .Values.minReadySeconds }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 20%
+      maxUnavailable: {{ .Values.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- include "momo-store-chart.selectorLabels" . | nindent 6 }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  template:
+    metadata:
+      labels:
+        {{- include "momo-store-chart.labels" . | nindent 8 }}
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "{{ .Values.containerPort }}"
+        prometheus.io/scrape: "true" 
+    spec:
+      containers:
+        - name: {{ include "momo-store-chart.name" . }}
+          image: "{{ .Values.repository }}:{{ .Values.imageTag | default .Chart.AppVersion }}"
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "200m"
+          ports:
+            - name: {{ include "momo-store-chart.name" . }}
+              containerPort: {{ .Values.containerPort }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.containerPort }}
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 1
+            failureThreshold: 6
+      imagePullSecrets:
+        - name: {{ .Values.namePullSecrets }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: "app"
+                operator: In
+                values:
+                - {{ include "momo-store-chart.name" . }}
+            topologyKey: "kubernetes.io/hostname"      

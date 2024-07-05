@@ -1,0 +1,31 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: alertmanager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: alertmanager
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: "nginx"
+    ingress.alb.yc.io/external-ipv4-address: auto
+    ingress.alb.yc.io/group-name: infra-momo
+    cert-manager.io/cluster-issuer: "yc-clusterissuer"    
+spec:
+  ingressClassName: "nginx"
+  tls:
+    - hosts:
+      - "alertmanager.the-pro.ru"
+      secretName: alertmanager-domain-name-secret
+  rules:
+    - host: alertmanager.the-pro.ru
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: alertmanager
+                port:
+                  number: 9093

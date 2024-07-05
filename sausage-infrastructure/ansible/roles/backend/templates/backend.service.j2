@@ -1,0 +1,16 @@
+[Unit]
+Description=Manage Java backend
+
+[Service]
+Environment=REPORT_PATH={{ report_path }}
+Environment=LOG_PATH={{ log_path }}
+WorkingDirectory={{ backend_folder_path }}
+ExecStart=/bin/java -Xms128m -Xmx256m -jar {{ backend_exe }} --server.port={{ backend_port }}
+User={{ service_account }}
+Group={{ service_group }}
+Type=simple
+Restart=on-failure
+RestartSec=10
+SuccessExitStatus=143
+[Install]
+WantedBy=multi-user.target

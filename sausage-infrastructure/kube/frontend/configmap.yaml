@@ -1,0 +1,86 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-conf
+data:
+  nginx.conf: |
+    user  nginx;
+    worker_processes  auto;
+    error_log  /var/log/nginx/error.log notice;
+    pid        /var/run/nginx.pid;
+    events {
+        worker_connections  1024;
+    }
+
+    http {
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+
+        log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                          '$status $body_bytes_sent "$http_referer" '
+                          '"$http_user_agent" "$http_x_forwarded_for"';
+
+        access_log  /var/log/nginx/access.log  main;
+
+        sendfile        on;
+        keepalive_timeout  65;
+
+        proxy_cache_path /tmp/nginx_cache levels=1:2 keys_zone=all:64m inactive=2h max_size=100m;
+
+        upstream backend {
+          server backend:8080;
+        }
+
+        server {
+          listen 80 default_server;
+          listen [::]:80 default_server;
+
+          open_file_cache          max=1000 inactive=20s;
+          open_file_cache_valid    30s;
+          open_file_cache_min_uses 2;
+          open_file_cache_errors   on;
+
+          client_body_buffer_size 16k;
+          client_max_body_size 1m;
+          client_header_buffer_size 1k;
+          large_client_header_buffers 4 8k;
+
+          client_body_timeout 30s;
+          client_header_timeout 10s;
+
+          keepalive_timeout 30s;
+          send_timeout 20s;
+
+          add_header servercache_status $upstream_cache_status;
+
+          root /app/frontend;
+
+          index index.html index.htm index.nginx-debian.html;
+
+          server_name _;
+
+          location ~^/api {
+            if  ($http_cookie ~* ".+"){
+              set $cookie_cache_bypass 1;
+            }
+            if  ($request_uri ~* "/api/orders"){
+              set $cookie_cache_bypass 1;
+            }
+
+            proxy_cache_bypass $cookie_cache_bypass;
+            proxy_cache all;
+            proxy_cache_methods GET HEAD;
+            proxy_cache_valid 404 502 503 5m;
+            proxy_cache_valid any 1h;
+            proxy_cache_use_stale error timeout invalid_header updating;
+
+            proxy_pass http://backend;
+          }
+
+          location / {
+            expires 3d;
+            try_files $uri $uri/ =404;
+          }
+        }
+    }

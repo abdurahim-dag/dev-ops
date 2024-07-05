@@ -1,0 +1,105 @@
+stages:
+  - build
+  - test
+  - release
+  - deploy
+  - notify
+
+variables:
+  VERSION: 1.0.${CI_PIPELINE_ID}
+  MAVEN_REPO_PATH: ${CI_PROJECT_DIR}/.m2/repository
+
+cache:
+  paths:
+    - frontend/dist/frontend
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
+
+build:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:v1.9.0-debug
+    entrypoint: [""]
+  script:
+    - echo "test"
+    - /kaniko/executor
+      --context "${CI_PROJECT_DIR}/frontend"
+      --dockerfile "${CI_PROJECT_DIR}/frontend/Dockerfile"
+      --destination "${CI_REGISTRY_IMAGE}/sausage-frontend:$CI_COMMIT_SHA"
+      --build-arg VERSION=$VERSION
+      --cache=true
+
+build-frontend-code-job:
+  stage: build
+  script:
+    - cd frontend
+    - npm install
+    - npm run build
+  artifacts:
+    paths:
+      - frontend/dist/frontend
+  when: manual
+
+sonarqube-frontend-sast:
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  stage: test
+  needs:
+    - build-frontend-code-job
+  script:
+    - cd frontend
+    - sonar-scanner -Dsonar.sources=src -Dsonar.qualitygate.wait=true -Dsonar.projectKey=$SONAR_FRONTEND_KEY -Dsonar.host.url=$SONAR_URL -Dsonar.login=$SONAR_TOKEN_FRONTEND -Dsonar.projectName=$SONAR_FRONTEND_KEY
+
+release:
+  variables:
+    GIT_STRATEGY: none
+  image:
+    name: gcr.io/go-containerregistry/crane:debug
+    entrypoint: [""]
+  cache: []
+  stage: release
+  before_script:
+    - crane auth login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - crane tag $CI_REGISTRY_IMAGE/sausage-frontend:$CI_COMMIT_SHA latest
+  when: manual
+
+deploy:
+  stage: deploy
+  image: docker:25.0.1-dind
+  before_script:
+    - apk add openssh-client gettext bash
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - SSH_KNOWN_HOSTS=$(ssh-keyscan -p ${DEV_SSH_PORT} ${DEV_HOST})
+    - echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - touch ./.backend.env
+    - touch ./.frontend.env
+    - echo "DOMAIN=${DOMAIN}" >> ./.frontend.env
+    - touch ./.report.env
+    - touch ./.certbot.env
+    - echo "DOMAIN=${DOMAIN}" >> ./.certbot.env
+    - echo "DOMAIN_EMAIL=${DOMAIN_EMAIL}" >> ./.certbot.env
+  script:
+    - docker context create remote --docker "host=ssh://${DEV_USER}@${DEV_HOST}:${DEV_SSH_PORT}"
+    - docker context use remote
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+    - docker compose build certbot
+    - docker compose create certbot
+    - docker cp ./certbot.sh sausage-store-certbot-1:/home
+    - docker start sausage-store-certbot-1
+    - docker compose up -d --force-recreate --pull always --no-deps frontend
+  when: manual
+
+telegram-notification-frontend:
+  stage: notify
+  rules:
+    - if: $CI_COMMIT_MESSAGE =~ /send notification/
+  script:
+    - 'curl -X POST -H "Content-type: application/json" --data "{\"chat_id\": \"$TELEGRAM_ID\", \"text\": \"std-022-044 собрал приложение frontend. Artifacts: $CI_PROJECT_URL/-/jobs/artifacts/$CI_COMMIT_SHA/download?job=build-frontend-code-job\"}" "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage"'
+  when: manual

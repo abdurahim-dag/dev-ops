@@ -1,0 +1,62 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: report
+  labels:
+    app: report
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: report
+  revisionHistoryLimit: 12
+  template:
+    metadata:
+      labels:
+        app: report
+    spec:
+      containers:
+        - name: report
+          image: gitlab.praktikum-services.ru:5050/std-022-044/sausage-store/sausage-backend-report:latest
+          imagePullPolicy: Always
+          env:
+            - name: DB
+              valueFrom:
+                secretKeyRef:
+                  name: backend
+                  key: spring_data_mongodb_uri
+            - name: PORT
+              value: "8080"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "200m"
+          ports:
+            - name: report
+              containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 1
+            failureThreshold: 6
+      imagePullSecrets:
+        - name: docker-config-secret
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: "app"
+                operator: In
+                values:
+                - report
+            topologyKey: "kubernetes.io/hostname"      

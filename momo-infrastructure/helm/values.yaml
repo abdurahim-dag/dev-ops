@@ -1,0 +1,29 @@
+dockerRegistryAuth: $DOCKERREGISTRYAUTH
+hostName: &hostName devops.the-pro.ru
+namePullSecrets: &namePullSecrets docker-config-secret
+
+backend:
+  minReplicas: 1
+  maxReplicas: 5
+  minAvailable: 1
+  maxUnavailable: 1  
+  containerPort: &backendPort 8081
+  servicePort: *backendPort
+  minReadySeconds: 60
+  revisionHistoryLimit: 12
+  repository: gitlab.praktikum-services.ru:5050/std-022-044/momo-store/momo-backend
+  imageTag: $BACKEND_DOCKER_IMAGE_VERSION
+  namePullSecrets: *namePullSecrets
+
+frontend:
+  hostName: *hostName
+  replicas: 1
+  containerPort: 80
+  servicePort: 8080
+  backendPort: 8081
+  nameBackend: backend
+  namePullSecrets: *namePullSecrets
+  repository: gitlab.praktikum-services.ru:5050/std-022-044/momo-store/momo-frontend
+  imageTag: $FRONTEND_DOCKER_IMAGE_VERSION
+  subnet_id: e9bgkseq6lbbgeqo00rg
+  security_group_name: k8s-main-sg

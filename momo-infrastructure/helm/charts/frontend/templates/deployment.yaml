@@ -1,0 +1,52 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "momo-store-chart.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "momo-store-chart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "momo-store-chart.selectorLabels" . | nindent 6 }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  template:
+    metadata:
+      labels:
+        {{- include "momo-store-chart.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ include "momo-store-chart.name" . }}
+          image: "{{ .Values.repository }}:{{ .Values.imageTag | default .Chart.AppVersion }}"
+          imagePullPolicy: Always
+          env:
+            - name: DOMAIN
+              value: {{ .Values.hostName }}
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
+          ports:
+            - name: {{ include "momo-store-chart.name" . }}
+              containerPort: {{ .Values.containerPort }}
+      volumes:
+        - name: nginx-conf
+          configMap:
+            name: nginx-conf
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+      imagePullSecrets:
+        - name: {{ .Values.namePullSecrets }}

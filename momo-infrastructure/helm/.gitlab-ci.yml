@@ -1,0 +1,25 @@
+stages:
+  - deploy
+
+variables:
+  VERSION: 1.0.${CI_PIPELINE_ID}
+  
+deploy:
+  stage: deploy
+  environment:
+    name: production
+    url: https://devops.the-pro.ru
+  image: alpine/k8s:1.28.2
+  before_script:
+    - cd helm
+    - cat values.yaml | envsubst > values-env.yaml
+    - mv values-env.yaml values.yaml
+    - mkdir -p ~/.kube
+    - echo "$KUBECONFIGFILE" >> ~/.kube/config    
+  script:
+    - helm upgrade --atomic --timeout 5m --version $VERSION --install momo-store .
+  after_script:
+    - rm -rf ./secret.yaml
+    - rm ~/.kube/config
+  when: manual
+

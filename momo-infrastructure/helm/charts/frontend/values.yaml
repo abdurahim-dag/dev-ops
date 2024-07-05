@@ -1,0 +1,10 @@
+hostName: std-022-44.k8s.praktikum-services.tech
+replicas: 1
+containerPort: 80
+servicePort: 8080
+backendPort: 8081
+nameBackend: backend
+namePullSecrets: docker-config-secret
+repository: gitlab.praktikum-services.ru:5050/std-022-044/momo-store/momo-frontend
+subnet_id: e9bejjirie2u74abtkeh
+security_group_name: k8s-main-sg

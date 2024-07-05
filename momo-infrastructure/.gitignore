@@ -1,0 +1,11 @@
+key
+id_rsa
+id_ecdsa
+key.json
+.idea/
+.vscode/
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+.vault

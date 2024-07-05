@@ -1,0 +1,21 @@
+upstream backend {
+    server {{ansible_all_ipv4_addresses[0]}}:8081;
+}
+
+server {
+        listen 80 default_server;
+        listen [::]:80 default_server;
+        root /var/{{service_account}}/frontend;
+
+        index index.html index.htm index.nginx-debian.html;
+
+        server_name _;
+
+        location ~^/api {
+            proxy_pass http://backend;
+        }
+
+        location / {
+                try_files $uri $uri/ =404;
+        }
+}

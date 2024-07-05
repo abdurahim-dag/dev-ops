@@ -1,0 +1,31 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "momo-store-chart.name" . }}
+  namespace: {{ .Release.Namespace }}  
+  labels: {{ include "momo-store-chart.labels" . | nindent 4 }}
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    ingress.alb.yc.io/subnets: {{ .Values.subnet_id }}
+    ingress.alb.yc.io/security-groups: {{ .Values.security_group_name }}
+    ingress.alb.yc.io/external-ipv4-address: auto
+    ingress.alb.yc.io/group-name: infra-momo
+    cert-manager.io/cluster-issuer: "yc-clusterissuer"    
+spec:
+  ingressClassName: "nginx"
+  tls:
+    - hosts:
+      - "{{ .Values.hostName }}"
+      secretName: domain-name-secret
+  rules:
+    - host: {{ .Values.hostName }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "momo-store-chart.name" . }}
+                port:
+                  number: {{ .Values.servicePort }}

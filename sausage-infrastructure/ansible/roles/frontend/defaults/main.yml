@@ -1,0 +1,8 @@
+---
+node_major: 16
+service_account: www-data
+service_group: www-data
+frontend_folder_path: /var/www-data/frontend/dist/frontend
+nexus_repo_frontend_name: std-022-044-frontend
+version: 1.0.968266
+frontend_port: 80

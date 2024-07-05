@@ -1,0 +1,47 @@
+---
+- name: создание сервисного пользователя
+  ansible.builtin.user:
+    name: "{{ service_account }}"
+
+- name: Создадим папку приложения
+  ansible.builtin.file:
+    path: "{{ backend_folder_path }}"
+    state: directory
+    recurse: yes
+    owner: "{{ service_account }}"
+    group: "{{ service_group }}"
+
+- name: Установка openjdk-16-jdk
+  ansible.builtin.apt:
+    name: openjdk-16-jdk
+    state: present
+
+- name: Скачивание артефактов бэкенда из Nexus
+  ansible.builtin.get_url:
+    url: "{{nexus_repo_url}}/{{nexus_repo_backend_name}}/com/yandex/practicum/devops/sausage-store/{{version}}/sausage-store-{{version}}.jar"
+    dest: "{{backend_folder_path}}/sausage-store.jar"
+    username: "{{nexus_repo_user}}"
+    password: "{{nexus_repo_pass}}"
+    owner: "{{ service_account }}"
+    group: "{{ service_group }}"
+
+- name: Создание systemd-юнита для сервиса
+  template:
+    src: backend.service.j2
+    dest: /etc/systemd/system/backend.service
+
+- name: Запуск бэкенда
+  ansible.builtin.systemd_service:
+    state: restarted
+    daemon_reload: true
+    name: backend
+
+- name: Открытие порта tcp
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "{{ backend_port }}"
+    ctstate: NEW
+    syn: match
+    jump: ACCEPT
+    comment: Accept connections to backend app.

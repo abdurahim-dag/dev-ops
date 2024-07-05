@@ -1,0 +1,38 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sausage-store-chart.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "sausage-store-chart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas }}
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  selector:
+    matchLabels:
+      {{- include "sausage-store-chart.selectorLabels" . | nindent 6 }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  template:
+    metadata:
+      labels:
+        {{- include "sausage-store-chart.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ include "sausage-store-chart.name" . }}
+          image: "{{ .Values.repository }}:{{ .Values.imageTag | default .Chart.AppVersion }}"
+          imagePullPolicy: Always
+          env:
+            {{- toYaml .Values.env | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- include "frontend.volumeMounts" . | nindent 12}}
+          ports:
+            - name: {{ include "sausage-store-chart.name" . }}
+              containerPort: {{ .Values.targetPort }}
+      volumes:
+        {{- include "frontend.volumes" . | nindent 8}}
+      imagePullSecrets:
+        - name: {{ .Values.namePullSecrets }}

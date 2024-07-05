@@ -1,0 +1,25 @@
+stages:
+  - deploy
+
+deploy:
+  stage: deploy
+  environment:
+    name: staging
+    url: https://std-022-44.k8s.praktikum-services.tech
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+  before_script:
+    - echo "$KUBECONFIGFILE" >> ~/.kube/config
+    - cd kube
+    - cat ./secrets/dockerconfig.yaml | envsubst | tee ./secrets/dockerconfig.yaml
+    - cat ./secrets/project.yaml | envsubst | tee ./secrets/project.yaml
+  script:
+    - kubectl apply -f secrets
+    - kubectl apply -f frontend
+    - kubectl apply -f backend
+    - kubectl apply -f backend-report
+  after_script:
+    - rm -rf ./secrets/*
+    - rm ~/.kube/config
+  when: manual

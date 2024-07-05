@@ -1,0 +1,13 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "sausage-store-chart.fullname" . }}
+  namespace: {{ .Release.Namespace }}  
+  labels: {{ include "sausage-store-chart.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  tls:
+    - hosts:
+      - "{{ .Values.hostName }}"
+  rules: {{ include "frontend.ingressRules" . | nindent 4 }}

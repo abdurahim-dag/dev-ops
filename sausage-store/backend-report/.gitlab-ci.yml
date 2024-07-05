@@ -1,0 +1,97 @@
+stages:
+  - build
+  - test
+  - release
+  - deploy
+  - notify
+
+variables:
+  VERSION: 1.0.${CI_PIPELINE_ID}
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
+
+build:
+  stage: build
+  image: docker:25.0.1-dind
+  before_script:
+    - apk add openssh-client gettext bash
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - SSH_KNOWN_HOSTS=$(ssh-keyscan -p ${DEV_SSH_PORT} ${DEV_HOST})
+    - echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - echo "CI_REGISTRY_IMAGE=$CI_REGISTRY_IMAGE" >> ./backend-report/.env
+    - echo "CI_COMMIT_SHA=$CI_COMMIT_SHA" >> ./backend-report/.env
+    - echo "CI_REGISTRY_IMAGE=$CI_REGISTRY_IMAGE" >> ./backend-report/.env
+  script:
+    - cd backend-report
+    - docker context create remote --docker "host=ssh://${DEV_USER}@${DEV_HOST}:${DEV_SSH_PORT}"
+    - docker context use remote
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+    - docker compose build
+    - docker compose push
+
+sonarqube-report-sast:
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  stage: test
+  needs:
+    - build
+  script:
+    - cd backend-report
+    - sonar-scanner
+      -Dsonar.projectKey=$SONAR_REPORT_KEY
+      -Dsonar.sources=./app
+      -Dsonar.host.url=$SONAR_URL
+      -Dsonar.login=$SONAR_TOKEN_REPORT
+      -Dsonar.projectName=$SONAR_REPORT_KEY
+
+release:
+  variables:
+    GIT_STRATEGY: none
+  image:
+    name: gcr.io/go-containerregistry/crane:debug
+    entrypoint: [""]
+  cache: []
+  stage: release
+  before_script:
+    - crane auth login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - crane tag $CI_REGISTRY_IMAGE/sausage-backend-report:$CI_COMMIT_SHA latest
+  when: manual
+
+deploy:
+  stage: deploy
+  image: docker:25.0.1-dind
+  before_script:
+    - apk add openssh-client gettext bash
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - SSH_KNOWN_HOSTS=$(ssh-keyscan -p ${DEV_SSH_PORT} ${DEV_HOST})
+    - echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - echo "PORT=\"$BACKEND_REPORT_PORT\"" >> ./.report.env
+    - echo "DB=\"mongodb://${BACKEND_MONGO_USER}:${BACKEND_MONGO_PASSWORD}@${BACKEND_MONGO_HOST}:${BACKEND_MONGO_PORT}/${BACKEND_MONGO_DATABASE}?tls=true&tlsAllowInvalidCertificates=true\"" >> ./.report.env
+    - touch ./.backend.env
+    - touch ./.frontend.env
+    - touch ./.certbot.env
+  script:
+    - docker context create remote --docker "host=ssh://${DEV_USER}@${DEV_HOST}:${DEV_SSH_PORT}"
+    - docker context use remote
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+    - docker compose up -d --force-recreate --pull always --no-deps backend-report
+  when: manual
+
+telegram-notification-backend:
+  stage: notify
+  rules:
+    - if: $CI_COMMIT_MESSAGE =~ /send notification/
+  script:
+    - 'curl -X POST -H "Content-type: application/json" --data "{\"chat_id\": \"$TELEGRAM_ID\", \"text\": \"std-022-044 собрал приложение backend. Artifacts: $CI_PROJECT_URL/-/jobs/artifacts/$CI_COMMIT_SHA/download?job=build-backend-code-job\"}" "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage"'
+  when: manual

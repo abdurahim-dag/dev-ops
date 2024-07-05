@@ -1,0 +1,12 @@
+---
+- name: Плей для запуска backend сервиса сосисочной
+  become: true
+  hosts: backend
+  roles:
+    - backend
+
+- name: Плей для запуска frontend сервиса сосисочной
+  become: true
+  hosts: frontend
+  roles:
+    - frontend

@@ -1,0 +1,34 @@
+project: std-022-044
+source:
+  repoURL: >-
+    https://nexus.praktikum-services.tech/repository/sausage-store-helm-std-022-044
+  targetRevision: 1.0.1274720
+  helm:
+    values: |
+      secretDockerConfigJSON: >-
+        { "auths": { "gitlab.praktikum-services.ru:5050": { "auth":
+        "c3RkLTAyMi0wNDQ6Z2xkdC1DYkw0VEtCOENMTlNQbkFINm9wLQ==" } } }
+      secretBackendPsqlUser: std-022-044
+      secretBackendPsqlPassword: Testusr1234
+      secretBackendPsqlHost: rc1a-swsg2g6j6bhznvm0.mdb.yandexcloud.net
+      secretBackendPsqlPort: '6432'
+      secretBackendPsqlDatabase: std-022-044
+      secretBackendMongoUser: std-022-044
+      secretBackendMongoPassword: Testusr1234
+      secretBackendMongoHost: rc1a-sui0a7vifhdsk9b1.mdb.yandexcloud.net
+      secretBackendMongoPort: 27018
+      secretBackendMongoDatabase: std-022-044
+  chart: sausage-store-chart
+destination:
+  server: 'https://kubernetes.default.svc'
+  namespace: std-022-044
+syncPolicy:
+  automated:
+    prune: true
+    selfHeal: true
+  retry:
+    limit: 2
+    backoff:
+      duration: 5s
+      factor: 2
+      maxDuration: 3m0s
